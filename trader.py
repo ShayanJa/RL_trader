@@ -8,6 +8,7 @@ from tf_agents.trajectories import trajectory
 from tf_agents.environments import wrappers
 from tf_agents.metrics import tf_metrics
 from tf_agents.policies import random_tf_policy
+from tf_agents.policies import policy_saver
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.utils import common
 from tf_agents.metrics import py_metrics
@@ -16,10 +17,9 @@ from tf_agents.drivers import py_driver
 from tf_agents.drivers import dynamic_episode_driver
 
 from environment import BitcoinEnvironment
-from prices import train
-from prices import test
+import datetime as dt
+import pandas as pd
 import matplotlib.pyplot as plt
-
 
 def compute_avg_return(environment, policy, num_episodes=10):
 
@@ -38,45 +38,51 @@ def compute_avg_return(environment, policy, num_episodes=10):
     avg_return = total_return / num_episodes
     return avg_return.numpy()[0]
   
-def compute_balance(environment, policy, num_episodes=10):
+def compute_balance(environment, policy):
   
-  balance = 0.0
-  for _ in range(num_episodes):
-    time_step = environment.reset()
-    balance = time_step.observation[0]
+  time_step = environment.reset()
+  balance = [time_step.observation[0][0]]
 
-    while not time_step.is_last():
-      print(time_step)
-      action_step = policy.action(time_step)
-      time_step = environment.step(action_step.action)
-      balance = time_step.observation[0][0]
+  while not time_step.is_last():
+    action_step = policy.action(time_step)
+    time_step = environment.step(action_step.action)
+    balance.append(time_step.observation[0][0])
 
   return balance
 
 
-num_iterations = 10000  # @param
+num_iterations = 20000  # @param
 
-initial_collect_steps = 1000  # @param
-collect_steps_per_iteration = 1  # @param
 replay_buffer_capacity = 100000  # @param
 
-fc_layer_params = (100,)
+fc_layer_params = (300,)
 
-batch_size = 128  # @param
-learning_rate = 1e-5  # @param
+batch_size = 30  # @param
+learning_rate = 1e-4  # @param
 log_interval = 200  # @param
 
-num_eval_episodes = 2  # @param
+num_eval_episodes = 4  # @param
 eval_interval = 1000  # @param
 
 initial_balance = 1000
+training_duration = 3000
+eval_duration = 1000
 
-train_py_env = wrappers.TimeLimit(BitcoinEnvironment(initial_balance, train, 10), duration=100)
-eval_py_env = wrappers.TimeLimit(BitcoinEnvironment(initial_balance, test, 10), duration=100)
+prices = pd.read_csv('btcusd.csv', parse_dates=True, index_col=0)
+
+# Split data into training and test set
+date_split = dt.datetime(2018, 3, 16, 1, 0)
+train = prices[:date_split]
+test = prices[date_split:]
+
+# Create Environments
+train_py_env = wrappers.TimeLimit(BitcoinEnvironment(initial_balance, train, 15), duration=training_duration)
+eval_py_env = wrappers.TimeLimit(BitcoinEnvironment(initial_balance, test, 15), duration=eval_duration)
 
 train_env = tf_py_environment.TFPyEnvironment(train_py_env)
 eval_env = tf_py_environment.TFPyEnvironment(eval_py_env)
 
+# Initialize Q Network
 q_net = q_network.QNetwork(
         train_env.observation_spec(),
         train_env.action_spec(),
@@ -121,8 +127,8 @@ def collect_step(environment, policy):
   # Add trajectory to the replay buffer
   replay_buffer.add_batch(traj)
 
-#for _ in range(1000):
-#        collect_step(train_env, tf_agent.collect_policy)
+for _ in range(1000):
+  collect_step(train_env, tf_agent.collect_policy)
 
 dataset = replay_buffer.as_dataset(
   num_parallel_calls=3,
@@ -144,8 +150,8 @@ tf_agent.train_step_counter.assign(0)
 
 final_time_step, policy_state = driver.run()
 
-for i in range(1000):
-  final_time_step, _ = driver.run(final_time_step, policy_state)
+# for i in range(1000):
+#   final_time_step, _ = driver.run(final_time_step, policy_state)
 
 episode_len = []
 portfolio_balance = []
@@ -165,9 +171,13 @@ for i in range(num_iterations):
 
   if step % eval_interval == 0:
       avg_return = compute_avg_return(eval_env, tf_agent.policy, num_eval_episodes)
-      balance = compute_balance(eval_env, tf_agent.policy, num_eval_episodes)
-      print('step = {0}: Average Return = {1}: Portfolio Balance = {2}'.format(step, avg_return, balance))
-      portfolio_balance.append(balance)
+      portfolio_balance = compute_balance(eval_env, tf_agent.policy)
+      print('step = {0}: Average Return = {1}: Portfolio Balance = {2}'.format(step, avg_return, portfolio_balance[-1]))
+  
+# my_policy = tf_agent.collect_policy
+# saver = policy_saver.PolicySaver(my_policy, batch_size=None)
+# saver.save('policy_trader')
 
-plt.plot([initial_balance]+ portfolio_balance)
+
+plt.plot(portfolio_balance, 'b')
 plt.show()

@@ -15,18 +15,19 @@ tf.compat.v1.enable_v2_behavior()
 
 class BitcoinEnvironment(py_environment.PyEnvironment):
   def __init__(self, initial_balance, price_data, price_history_t):
+    self.t = 0
     self.price_data = price_data
     self.price_history_t = price_history_t
     self.initial_balance = initial_balance
     self.balance = initial_balance
-    self.cash_balance = self.balance
+    self.cash_balance = initial_balance
     self.position_increment = .1
     self.positions = []
     self._action_spec = array_spec.BoundedArraySpec(
       shape=(), dtype=np.int32, minimum=0, maximum=2, name='action')
     self._observation_spec = array_spec.BoundedArraySpec(
       shape=(price_history_t+1,), dtype=np.float32, name="observation")
-    self._state = [self.balance] + [0 for _ in range(price_history_t)]
+    self._state = [self.balance] + [self.price_data.iloc[self.t - k, :]['Close'] for k in reversed(range(price_history_t))]
     self._episode_ended = False
 
   def observation_spec(self):
@@ -54,8 +55,11 @@ class BitcoinEnvironment(py_environment.PyEnvironment):
         self.cash_balance += self.price_data.iloc[self.t, :]['Close']* self.position_increment
       self.balance = self.cash_balance
       self.positions = []
-      rewards = profits
-
+      if profits > 0:
+        rewards = 2 * profits
+      else:
+        rewards = profits
+        
     self.balance = self.cash_balance
     for p in self.positions:
       self.balance += self.price_data.iloc[self.t, :]['Close'] * self.position_increment
@@ -79,6 +83,8 @@ class BitcoinEnvironment(py_environment.PyEnvironment):
     self._episode_ended = False
     self.profits = 0
     self.balance = self.initial_balance
+    self.cash_balance = self.initial_balance
+    self.positions = []
     self.price_history = [0 for i in range(self.price_history_t)]
     self._state = [self.balance] + self.price_history
     return ts.restart(np.array(self._state, dtype=np.float32))

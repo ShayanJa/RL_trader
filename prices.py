@@ -28,14 +28,16 @@ _columns=[
   'Taker buy quote asset volume',
   'ignore'
 ]
-klines = client.get_historical_klines("BTCUSDT", Client.KLINE_INTERVAL_1DAY, "July 4, 2013 PST")
+
+klines = client.get_historical_klines("BTCUSDT", Client.KLINE_INTERVAL_1HOUR, "July 4, 2013 PST")
 prices = pd.DataFrame(klines, columns=_columns).astype(float)
 
 # Change timestamp to datetime
 prices['Open time'] = prices['Open time'].apply(lambda x: dt.datetime.fromtimestamp(int(x)/1000))
 prices = prices.set_index('Open time')
+# Save data
+prices.to_csv('btcusd.csv')
 
-# Split data into training and test set
-date_split = dt.datetime(2018, 3, 16, 1, 0)
-train = prices[:date_split]
-test = prices[date_split:]
+# Display data
+plt.plot(prices['Close'])
+plt.show()
