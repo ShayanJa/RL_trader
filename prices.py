@@ -36,7 +36,7 @@ prices = pd.DataFrame(klines, columns=_columns).astype(float)
 prices['Open time'] = prices['Open time'].apply(lambda x: dt.datetime.fromtimestamp(int(x)/1000))
 prices = prices.set_index('Open time')
 # Save data
-# prices.to_csv('btcusd.csv')
+prices.to_csv('btcusd.csv')
 
 # Display data
 plt.plot(prices['Close'])

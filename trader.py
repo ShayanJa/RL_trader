@@ -64,14 +64,14 @@ log_interval = 200  # @param
 num_eval_episodes = 1  # @param
 eval_interval = 1000  # @param
 
-initial_balance = 1000
-training_duration = 3000
-eval_duration = 1000
+initial_balance = 1000  # @param
+training_duration = 3000  # @param
+eval_duration = 1000  # @param
 
-prices = pd.read_csv('btcusd.csv', parse_dates=True, index_col=0)
+date_split = dt.datetime(2018, 3, 16, 1, 0)  # @param
 
 # Split data into training and test set
-date_split = dt.datetime(2018, 3, 16, 1, 0)
+prices = pd.read_csv('btcusd.csv', parse_dates=True, index_col=0)
 train = prices[:date_split]
 test = prices[date_split:]
 
@@ -173,11 +173,6 @@ for i in range(num_iterations):
       avg_return = compute_avg_return(eval_env, tf_agent.policy, num_eval_episodes)
       portfolio_balance = compute_balance(eval_env, tf_agent.policy)
       print('step = {0}: Average Return = {1}: Portfolio Balance = {2}'.format(step, avg_return, portfolio_balance[-1]))
-  
-# my_policy = tf_agent.collect_policy
-# saver = policy_saver.PolicySaver(my_policy, batch_size=None)
-# saver.save('policy_trader')
-
-
+      
 plt.plot(portfolio_balance, 'b')
 plt.show()
