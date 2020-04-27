@@ -57,14 +57,14 @@ replay_buffer_capacity = 100000  # @param
 
 fc_layer_params = (100,)
 
-batch_size = 40  # @param
+batch_size = 100  # @param
 learning_rate = 1e-4  # @param
 log_interval = 200  # @param
 
 num_eval_episodes = 2  # @param
 eval_interval = 1000  # @param
 
-initial_balance = 1000  # @param
+initial_balance = 10000  # @param
 training_duration = 3000  # @param
 eval_duration = 1000  # @param
 
@@ -143,7 +143,7 @@ driver = dynamic_step_driver.DynamicStepDriver(
 
 iterator = iter(dataset)
 
-print(compute_avg_return(eval_env, tf_agent.policy, num_eval_episodes))
+print("Initial Balance: {}".format(initial_balance))
 
 tf_agent.train = common.function(tf_agent.train)
 tf_agent.train_step_counter.assign(0)
@@ -170,9 +170,9 @@ for i in range(num_iterations):
       print('Average episode length: {}'.format(train_metrics[3].result().numpy()))
 
   if step % eval_interval == 0:
-      avg_return = compute_avg_return(eval_env, tf_agent.policy, num_eval_episodes)
+      avg_reward = compute_avg_return(eval_env, tf_agent.policy, num_eval_episodes)
       portfolio_balance = compute_balance(eval_env, tf_agent.policy)
-      print('step = {0}: Average Return = {1}: Ending Portfolio Balance = {2}'.format(step, avg_return, portfolio_balance[-1]))
+      print('step = {0}: Average Reward = {1}: Ending Portfolio Balance = {2}'.format(step, avg_reward, portfolio_balance[-1]))
   
 # my_policy = tf_agent.collect_policy
 # saver = policy_saver.PolicySaver(my_policy, batch_size=None)
