@@ -55,13 +55,13 @@ num_iterations = 20000  # @param
 
 replay_buffer_capacity = 100000  # @param
 
-fc_layer_params = (300,)
+fc_layer_params = (100,)
 
-batch_size = 200  # @param
-learning_rate = 1e-3  # @param
+batch_size = 40  # @param
+learning_rate = 1e-4  # @param
 log_interval = 200  # @param
 
-num_eval_episodes = 1  # @param
+num_eval_episodes = 2  # @param
 eval_interval = 1000  # @param
 
 initial_balance = 1000  # @param
@@ -150,15 +150,15 @@ tf_agent.train_step_counter.assign(0)
 
 final_time_step, policy_state = driver.run()
 
-# for i in range(1000):
-#   final_time_step, _ = driver.run(final_time_step, policy_state)
+for i in range(1000):
+  final_time_step, _ = driver.run(final_time_step, policy_state)
 
 episode_len = []
 portfolio_balance = []
 for i in range(num_iterations):
   final_time_step, _ = driver.run(final_time_step, policy_state)
-  #for _ in range(1):
-  #    collect_step(train_env, tf_agent.collect_policy)
+  for _ in range(1):
+     collect_step(train_env, tf_agent.collect_policy)
 
   experience, _ = next(iterator)
   train_loss = tf_agent.train(experience=experience)
@@ -172,7 +172,7 @@ for i in range(num_iterations):
   if step % eval_interval == 0:
       avg_return = compute_avg_return(eval_env, tf_agent.policy, num_eval_episodes)
       portfolio_balance = compute_balance(eval_env, tf_agent.policy)
-      print('step = {0}: Average Return = {1}: Portfolio Balance = {2}'.format(step, avg_return, portfolio_balance[-1]))
+      print('step = {0}: Average Return = {1}: Ending Portfolio Balance = {2}'.format(step, avg_return, portfolio_balance[-1]))
   
 # my_policy = tf_agent.collect_policy
 # saver = policy_saver.PolicySaver(my_policy, batch_size=None)
