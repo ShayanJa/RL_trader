@@ -21,7 +21,7 @@ class BitcoinEnvironment(py_environment.PyEnvironment):
     self.initial_balance = initial_balance
     self.balance = initial_balance
     self.cash_balance = initial_balance
-    self.position_increment = .1
+    self.position_increment = .3
     self.positions = []
     self._action_spec = array_spec.BoundedArraySpec(
       shape=(), dtype=np.int32, minimum=0, maximum=2, name='action')
@@ -40,11 +40,13 @@ class BitcoinEnvironment(py_environment.PyEnvironment):
     # action = 0: Hold, 1: Buy, 2: Sell
     rewards = 0
     if action == 0:
-      pass
+      dp = self.price_data.iloc[self.t, :]['Close'] - self.price_data.iloc[self.t-1, :]['Close']
+      rewards = dp 
     elif action == 1:
       p = self.price_data.iloc[self.t, :]['Close'] * self.position_increment
       if p > self.cash_balance:
-        rewards = -1
+        # rewards = -1
+        pass
       else:
         self.cash_balance -= p 
         self.positions.append(self.price_data.iloc[self.t, :]['Close'])
@@ -55,10 +57,7 @@ class BitcoinEnvironment(py_environment.PyEnvironment):
         self.cash_balance += self.price_data.iloc[self.t, :]['Close']* self.position_increment
       self.balance = self.cash_balance
       self.positions = []
-      if profits > 0:
-        rewards = 2 * profits
-      else:
-        rewards = profits
+      rewards = profits
 
     self.balance = self.cash_balance
     for p in self.positions:
@@ -73,7 +72,7 @@ class BitcoinEnvironment(py_environment.PyEnvironment):
     self._state = [self.balance] + self.return_history
     
     return ts.transition(
-      np.array(self._state, dtype=np.float32), reward=rewards, discount=0.9)
+      np.array(self._state, dtype=np.float32), reward=rewards, discount=0.8)
    
   def action_spec(self):
     return self._action_spec

@@ -51,11 +51,11 @@ def compute_balance(environment, policy):
   return balance
 
 
-num_iterations = 20000  # @param
+num_iterations = 50000  # @param
 
 replay_buffer_capacity = 100000  # @param
 
-fc_layer_params = (100,)
+fc_layer_params = (100,23,33)
 
 batch_size = 100  # @param
 learning_rate = 1e-4  # @param
