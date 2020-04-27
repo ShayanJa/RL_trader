@@ -173,6 +173,11 @@ for i in range(num_iterations):
       avg_return = compute_avg_return(eval_env, tf_agent.policy, num_eval_episodes)
       portfolio_balance = compute_balance(eval_env, tf_agent.policy)
       print('step = {0}: Average Return = {1}: Portfolio Balance = {2}'.format(step, avg_return, portfolio_balance[-1]))
-      
+  
+# my_policy = tf_agent.collect_policy
+# saver = policy_saver.PolicySaver(my_policy, batch_size=None)
+# saver.save('policy_trader')
+
+
 plt.plot(portfolio_balance, 'b')
 plt.show()

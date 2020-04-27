@@ -20,6 +20,7 @@ python prices.py
 
 ### Future improvements
 Fine tuning hyper parameters
+Improve reward function
 Saving model and loading model if it exists
 Adding sentiment analysis to the state
 Live trading 
