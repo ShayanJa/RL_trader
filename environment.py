@@ -27,7 +27,7 @@ class BitcoinEnvironment(py_environment.PyEnvironment):
       shape=(), dtype=np.int32, minimum=0, maximum=2, name='action')
     self._observation_spec = array_spec.BoundedArraySpec(
       shape=(price_history_t+1,), dtype=np.float32, name="observation")
-    self._state = [self.balance] + [self.price_data.iloc[self.t - k, :]['Close'] for k in reversed(range(price_history_t))]
+    self.return_history = [self.price_data.iloc[self.t-k, :]['Close'] - self.price_data.iloc[self.t-k-1, :]['Close']  for k in reversed(range(self.price_history_t))]
     self._episode_ended = False
 
   def observation_spec(self):
@@ -59,18 +59,18 @@ class BitcoinEnvironment(py_environment.PyEnvironment):
         rewards = 2 * profits
       else:
         rewards = profits
-        
+
     self.balance = self.cash_balance
     for p in self.positions:
       self.balance += self.price_data.iloc[self.t, :]['Close'] * self.position_increment
     self.t += 1
-    self.price_history.pop(0)
-    self.price_history.append(self.price_data.iloc[self.t, :]['Close'])
+    self.return_history.pop(0)
+    self.return_history.append(self.price_data.iloc[self.t, :]['Close'] - self.price_data.iloc[self.t-1, :]['Close'])
 
     if self.t == len(self.price_data -1):
       self._episode_ended = True
 
-    self._state = [self.balance] + self.price_history
+    self._state = [self.balance] + self.return_history
     
     return ts.transition(
       np.array(self._state, dtype=np.float32), reward=rewards, discount=0.9)
@@ -85,6 +85,6 @@ class BitcoinEnvironment(py_environment.PyEnvironment):
     self.balance = self.initial_balance
     self.cash_balance = self.initial_balance
     self.positions = []
-    self.price_history = [0 for i in range(self.price_history_t)]
-    self._state = [self.balance] + self.price_history
+    self.return_history = [self.price_data.iloc[self.t-k, :]['Close'] - self.price_data.iloc[self.t-k-1, :]['Close']  for k in reversed(range(self.price_history_t))]
+    self._state = [self.balance] + self.return_history
     return ts.restart(np.array(self._state, dtype=np.float32))

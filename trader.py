@@ -57,11 +57,11 @@ replay_buffer_capacity = 100000  # @param
 
 fc_layer_params = (300,)
 
-batch_size = 30  # @param
-learning_rate = 1e-4  # @param
+batch_size = 200  # @param
+learning_rate = 1e-3  # @param
 log_interval = 200  # @param
 
-num_eval_episodes = 4  # @param
+num_eval_episodes = 1  # @param
 eval_interval = 1000  # @param
 
 initial_balance = 1000
