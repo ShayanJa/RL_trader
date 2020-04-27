@@ -48,14 +48,17 @@ class BitcoinEnvironment(py_environment.PyEnvironment):
         self.cash_balance -= p 
         self.positions.append(self.price_data.iloc[self.t, :]['Close'])
     elif action == 2:
-      rewards = 0 
-      profits = 0
+      rewards, profits = 0, 0
       for p in self.positions:
         profits += (self.price_data.iloc[self.t, :]['Close'] - p) * self.position_increment
         self.cash_balance += self.price_data.iloc[self.t, :]['Close']* self.position_increment
-      self.balance += profits
+      self.balance = self.cash_balance
+      self.positions = []
       rewards = profits
 
+    self.balance = self.cash_balance
+    for p in self.positions:
+      self.balance += self.price_data.iloc[self.t, :]['Close'] * self.position_increment
     self.t += 1
     self.price_history.pop(0)
     self.price_history.append(self.price_data.iloc[self.t, :]['Close'])

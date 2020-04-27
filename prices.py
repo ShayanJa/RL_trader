@@ -36,7 +36,6 @@ prices['Open time'] = prices['Open time'].apply(lambda x: dt.datetime.fromtimest
 prices = prices.set_index('Open time')
 
 # Split data into training and test set
-balance = 10000
 date_split = dt.datetime(2018, 3, 16, 1, 0)
 train = prices[:date_split]
 test = prices[date_split:]

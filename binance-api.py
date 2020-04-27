@@ -25,7 +25,7 @@ _columns=[
 
 client = Client(api_key, api_secret)
 
-klines = client.get_historical_klines("BTCUSDT", Client.KLINE_INTERVAL_1DAY, "July 4, 2013 PST")
+klines = client.get_historical_klines("BTCUSDT", Client.KLINE_INTERVAL_15MINUTE, "July 4, 2013 PST")
 
 df = pd.DataFrame(klines, columns=_columns).astype(float)
 # Change timestamp to datetime
@@ -34,5 +34,7 @@ df['Open time'] = df['Open time'].apply(lambda x: dt.datetime.fromtimestamp(int(
 # Plot binance
 df.plot(kind='line', x='Open time', y='Close')
 print(df['Open time'])
+df.to_csv('btcusd.csv')
+
 plt.show()
 

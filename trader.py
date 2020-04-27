@@ -30,7 +30,6 @@ def compute_avg_return(environment, policy, num_episodes=10):
         episode_return = 0.0
 
         while not time_step.is_last():
-            print(time_step)
             action_step = policy.action(time_step)
             time_step = environment.step(action_step.action)
             episode_return += time_step.reward
@@ -38,6 +37,22 @@ def compute_avg_return(environment, policy, num_episodes=10):
 
     avg_return = total_return / num_episodes
     return avg_return.numpy()[0]
+  
+def compute_balance(environment, policy, num_episodes=10):
+  
+  balance = 0.0
+  for _ in range(num_episodes):
+    time_step = environment.reset()
+    balance = time_step.observation[0]
+
+    while not time_step.is_last():
+      print(time_step)
+      action_step = policy.action(time_step)
+      time_step = environment.step(action_step.action)
+      balance = time_step.observation[0][0]
+
+  return balance
+
 
 num_iterations = 10000  # @param
 
@@ -133,6 +148,7 @@ for i in range(1000):
   final_time_step, _ = driver.run(final_time_step, policy_state)
 
 episode_len = []
+portfolio_balance = []
 for i in range(num_iterations):
   final_time_step, _ = driver.run(final_time_step, policy_state)
   #for _ in range(1):
@@ -149,6 +165,9 @@ for i in range(num_iterations):
 
   if step % eval_interval == 0:
       avg_return = compute_avg_return(eval_env, tf_agent.policy, num_eval_episodes)
-      print('step = {0}: Average Return = {1}'.format(step, avg_return))
-plt.plot(episode_len)
+      balance = compute_balance(eval_env, tf_agent.policy, num_eval_episodes)
+      print('step = {0}: Average Return = {1}: Portfolio Balance = {2}'.format(step, avg_return, balance))
+      portfolio_balance.append(balance)
+
+plt.plot([initial_balance]+ portfolio_balance)
 plt.show()
