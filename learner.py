@@ -22,20 +22,26 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+AGENT_MODEL_PATH = "policy_10000"
+
+physical_devices = tf.config.experimental.list_physical_devices('GPU')
+if physical_devices:
+  tf.config.experimental.set_memory_growth(physical_devices[0], True)
+
 def compute_performance(environment, policy):
 
-    time_step = environment.reset()
-    total_return = 0.0
-    balance = [time_step.observation[0][0]]
+  time_step = environment.reset()
+  total_return = 0.0
+  balance = [time_step.observation[0][0]]
 
-    while not time_step.is_last():
-      action_step = policy.action(time_step)
-      time_step = environment.step(action_step.action)
-      total_return += time_step.reward
-      balance.append(time_step.observation[0][0])
-      # print(time_step.observation)
+  while not time_step.is_last():
+    action_step = policy.action(time_step, policy_state)
+    time_step = environment.step(action_step.action)
+    total_return += time_step.reward
+    balance.append(time_step.observation[0][0])
+    # print(time_step.observation)
 
-    return total_return[0], balance
+  return total_return[0], balance
 
 num_iterations = 10000  # @param
 
@@ -47,7 +53,6 @@ batch_size = 100  # @param
 learning_rate = 1e-4  # @param
 log_interval = 200  # @param
 
-num_eval_episodes = 2  # @param
 eval_interval = 1000  # @param
 
 date_split = dt.datetime(2018, 3, 16, 1, 0)  # @param
@@ -61,11 +66,18 @@ initial_balance = 10000  # @param
 training_duration = 200  # @param
 eval_duration = 200 # @param
 
+# Strategy 
+slow_ma_t = 26
+fast_ma_t = 12
+return_history_t = 15
+mean_history_t = 15
+macd_t = 10
+
 
 # Create Environments
-train_py_env = wrappers.TimeLimit(BitcoinEnvironment(initial_balance, train, 15, 15, 10, 12, 26), duration=training_duration)
-eval_py_env = wrappers.TimeLimit(BitcoinEnvironment(initial_balance, test, 15, 15, 10, 12, 26 ), duration=eval_duration)
-test_py_env = wrappers.TimeLimit(BitcoinEnvironment(initial_balance, test, 15, 15, 10, 12, 26 ), duration=len(test)-1)
+train_py_env = wrappers.TimeLimit(BitcoinEnvironment(initial_balance, train, 15, 15, 10, fast_ma_t, slow_ma_t), duration=training_duration)
+eval_py_env = wrappers.TimeLimit(BitcoinEnvironment(initial_balance, test, 15, 15, 10, fast_ma_t, slow_ma_t ), duration=eval_duration)
+test_py_env = wrappers.TimeLimit(BitcoinEnvironment(initial_balance, test, 15, 15, 10, fast_ma_t, slow_ma_t ), duration=len(test)-1)
 
 train_env = tf_py_environment.TFPyEnvironment(train_py_env)
 eval_env = tf_py_environment.TFPyEnvironment(eval_py_env)
@@ -78,20 +90,25 @@ q_net = q_network.QNetwork(
   fc_layer_params=fc_layer_params)
 
 optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate)
-
-train_step_counter = tf.compat.v2.Variable(0)
+train_step_counter = tf.compat.v2.Variable(0)    
 
 tf_agent = dqn_agent.DqnAgent(
-  train_env.time_step_spec(),
-  train_env.action_spec(),
+train_env.time_step_spec(),
+train_env.action_spec(),
   q_network=q_net,
   optimizer=optimizer,
   train_step_counter=train_step_counter)
 
 tf_agent.initialize()
 
-eval_policy = tf_agent.policy
-collect_policy = tf_agent.collect_policy
+try:
+  collect_policy = tf.compat.v2.saved_model.load(AGENT_MODEL_PATH)
+  policy_state = collect_policy.get_initial_state(batch_size=3)
+  print("Policy loaded from: {}".format(AGENT_MODEL_PATH))
+except:
+  print("Initiating new policy")
+  collect_policy = tf_agent.collect_policy
+
 
 replay_buffer = tf_uniform_replay_buffer.TFUniformReplayBuffer(
   data_spec=tf_agent.collect_data_spec,
@@ -162,9 +179,10 @@ for i in range(num_iterations):
     reward, portfolio_balance = compute_performance(eval_env, tf_agent.policy)
     print('step = {0}: Average Reward = {1}: Ending Portfolio Balance = {2}'.format(step, reward, portfolio_balance[-1]))
 
-# my_policy = tf_agent.collect_policy
-# saver = policy_saver.PolicySaver(my_policy, batch_size=None)
-# saver.save('policy_trader')
+my_policy = tf_agent.collect_policy
+saver = policy_saver.PolicySaver(my_policy, batch_size=None)
+saver.save('policy_%d' % num_iterations)
+
 
 # Compare against Buy and hold
 reward, portfolio_balance = compute_performance(test_env, tf_agent.policy)
