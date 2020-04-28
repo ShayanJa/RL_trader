@@ -26,7 +26,7 @@ class BitcoinEnvironment(py_environment.PyEnvironment):
     self.initial_balance = initial_balance
     self.balance = initial_balance
     self.cash_balance = initial_balance
-    self.position_increment = .1
+    self.position_increment = 10
     self.max_drawdown = initial_balance
     self.positions = []
     self._action_spec = array_spec.BoundedArraySpec(
@@ -56,8 +56,8 @@ class BitcoinEnvironment(py_environment.PyEnvironment):
       # for p in self.positions:
       #   rewards += 0.1 * dp
       #   rewards += .2 * (self.MACD[-1])
-        # if dp < 0:
-        #   rewards *= 2
+      #   if dp < 0:
+      #     rewards *= 2
     elif action == 1:
       p = self.price_data.iloc[self.t, :]['Close'] * self.position_increment
       if p > self.cash_balance:

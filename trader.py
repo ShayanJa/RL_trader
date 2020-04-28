@@ -53,7 +53,7 @@ eval_interval = 1000  # @param
 date_split = dt.datetime(2018, 3, 16, 1, 0)  # @param
 
 # Split data into training and test set
-prices = pd.read_csv('btcusd.csv', parse_dates=True, index_col=0)
+prices = pd.read_csv('msft.csv', parse_dates=True, index_col=0)
 train = prices[:date_split]
 test = prices[date_split:]
 
