@@ -33,12 +33,12 @@ class BitcoinEnvironment(py_environment.PyEnvironment):
       shape=(), dtype=np.int32, minimum=0, maximum=2, name='action')
     self._observation_spec = array_spec.BoundedArraySpec(
       shape=(price_history_t+macd_t+1,), dtype=np.float32, name="observation")
-    self.return_history = [self.price_data.iloc[self.t-k, :]['Close'] - self.price_data.iloc[self.t-k-1, :]['Close']  for k in reversed(range(self.price_history_t))]
+    self.return_history = [self.price_data.iloc[self.t+1, :]['Close'] - self.price_data.iloc[self.t, :]['Close']  for _ in range(self.price_history_t)]
     self.mean_data = self.price_data.rolling(20, min_periods=1).mean()
     # self.mean_history = [self.mean_data.iloc[self.t-k, :]['Close'] for k in reversed(range(self.mean_history_t))]
     self.MACD_trend = ta.trend.ema_indicator(self.price_data['Close'], self.fast_ema) - ta.trend.ema_indicator(self.price_data['Close'], self.slow_ema)
-    self.MACD_trend = self.MACD_trend.dropna().tolist()
-    self.MACD = [self.MACD_trend[self.t-k] for k in reversed(range(self.macd_t))]
+    self.MACD_trend = self.MACD_trend.fillna(self.MACD_trend[slow_ema]).tolist()
+    self.MACD = [self.MACD_trend[self.t] for _ in reversed(range(self.macd_t))]
     self._episode_ended = False
 
   def observation_spec(self):
@@ -87,7 +87,7 @@ class BitcoinEnvironment(py_environment.PyEnvironment):
     self.return_history.append(self.price_data.iloc[self.t, :]['Close'] - self.price_data.iloc[self.t-1, :]['Close'])
     self.MACD.pop(0)
     self.MACD.append(self.MACD_trend[self.t])
-    if self.t == len(self.price_data -1):
+    if self.t == len(self.price_data)-1:
       self._episode_ended = True
 
     self._state = [self.balance] + self.return_history + self.MACD
@@ -105,9 +105,9 @@ class BitcoinEnvironment(py_environment.PyEnvironment):
     self.balance = self.initial_balance
     self.cash_balance = self.initial_balance
     self.positions = []
-    self.return_history = [self.price_data.iloc[self.t-k, :]['Close'] - self.price_data.iloc[self.t-k-1, :]['Close']  for k in reversed(range(self.price_history_t))]
+    self.return_history = [self.price_data.iloc[self.t+1, :]['Close'] - self.price_data.iloc[self.t, :]['Close']  for _ in range(self.price_history_t)]
     self.mean_history = [self.mean_data.iloc[self.t-k, :]['Close'] for k in reversed(range(self.mean_history_t))]
-    self.MACD = [self.MACD_trend[self.t-k] for k in reversed(range(self.macd_t))]
+    self.MACD = [self.MACD_trend[self.t] for _ in reversed(range(self.macd_t))]
     self._state = [self.balance] + self.return_history + self.MACD
     return ts.restart(np.array(self._state, dtype=np.float32))
 

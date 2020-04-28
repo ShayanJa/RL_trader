@@ -33,7 +33,7 @@ def compute_performance(environment, policy):
       time_step = environment.step(action_step.action)
       total_return += time_step.reward
       balance.append(time_step.observation[0][0])
-      print(time_step.observation)
+      # print(time_step.observation)
 
     return total_return[0], balance
 
@@ -168,9 +168,11 @@ for i in range(num_iterations):
 
 # Compare against Buy and hold
 reward, portfolio_balance = compute_performance(test_env, tf_agent.policy)
-bnh = eval_py_env.buy_and_hold().head(eval_duration+1)
+bnh = eval_py_env.buy_and_hold().head(len(test))
 portfolio_balance = pd.DataFrame(data={'Close': np.array(portfolio_balance)}, index=bnh.index)
 print("RL GAIN = {}: BUY/HOLD = {}".format(portfolio_balance.iloc[-1,:]['Close']-portfolio_balance.iloc[0,:]['Close'], bnh.iloc[-1]['Close']-bnh.iloc[0]['Close']))
+print("% RL GAIN = {}: % BUY/HOLD = {}".format((portfolio_balance.iloc[-1,:]['Close']-portfolio_balance.iloc[0,:]['Close'])/portfolio_balance.iloc[0,:]['Close'], (bnh.iloc[-1]['Close']-bnh.iloc[0]['Close'])/bnh.iloc[0]['Close']))
+
 bnh['Close'].plot()
 portfolio_balance['Close'].plot()
 
