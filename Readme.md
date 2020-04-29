@@ -15,7 +15,8 @@ make sure to set your .env vars for binance
 ```
 CLIENT_KEY=XXXXX
 CLIENT_SECRET=XXXXX
-python prices.py
+python binance-api.py
+python stock-api.py
 ```
 
 ### Improvements

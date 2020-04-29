@@ -22,8 +22,12 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# AGENT_MODEL_PATH = "policy_10000"
+AGENT_MODEL_PATH = "policy_10000" # @param
+SAVE_MODEL, LOAD_MODEL = True, False # @param
+STOCK = 'BTC'
+CSV_PATH = 'btcusd.csv' # @param
 
+# Check for GPU
 physical_devices = tf.config.experimental.list_physical_devices('GPU')
 if physical_devices:
   tf.config.experimental.set_memory_growth(physical_devices[0], True)
@@ -42,7 +46,7 @@ def compute_performance(environment, policy):
     # print(time_step.observation)
 
   return total_return[0], balance
-
+  
 num_iterations = 10000  # @param
 
 replay_buffer_capacity = 100000  # @param
@@ -58,7 +62,7 @@ eval_interval = 1000  # @param
 date_split = dt.datetime(2018, 3, 16, 1, 0)  # @param
 
 # Split data into training and test set
-prices = pd.read_csv('btcusd.csv', parse_dates=True, index_col=0)
+prices = pd.read_csv(CSV_PATH, parse_dates=True, index_col=0)
 train = prices[:date_split]
 test = prices[date_split:]
 
@@ -101,12 +105,16 @@ train_env.action_spec(),
 
 tf_agent.initialize()
 
-try:
-  collect_policy = tf.compat.v2.saved_model.load(AGENT_MODEL_PATH)
-  policy_state = collect_policy.get_initial_state(batch_size=3)
-  print("Policy loaded from: {}".format(AGENT_MODEL_PATH))
-except:
-  print("Initiating new policy")
+if LOAD_MODEL:
+  try:
+    collect_policy = tf.compat.v2.saved_model.load(AGENT_MODEL_PATH)
+    policy_state = collect_policy.get_initial_state(batch_size=3)
+    print("Policy loaded from: {}".format(AGENT_MODEL_PATH))
+  except:
+    print("Initiating new policy...")
+    collect_policy = tf_agent.collect_policy
+else:
+  print("Initiating new policy...")
   collect_policy = tf_agent.collect_policy
 
 
@@ -179,10 +187,11 @@ for i in range(num_iterations):
     reward, portfolio_balance = compute_performance(eval_env, tf_agent.policy)
     print('step = {0}: Average Reward = {1}: Ending Portfolio Balance = {2}'.format(step, reward, portfolio_balance[-1]))
 
-my_policy = tf_agent.collect_policy
-saver = policy_saver.PolicySaver(my_policy, batch_size=None)
-saver.save('policy_%d' % num_iterations)
 
+if SAVE_MODEL:
+  my_policy = tf_agent.collect_policy
+  saver = policy_saver.PolicySaver(my_policy, batch_size=None)
+  saver.save('policy_%d' % num_iterations)
 
 # Compare against Buy and hold
 reward, portfolio_balance = compute_performance(test_env, tf_agent.policy)
@@ -196,4 +205,10 @@ portfolio_balance['Close'].plot()
 
 history = pd.DataFrame(data={"Buy/Hold": bnh['Close'], "RL": portfolio_balance['Close']}, index=bnh.index)
 history.to_csv("results/trader-{}".format(dt.datetime.now()))
+
+# Display data
+plt.title(STOCK)
+plt.xlabel('Date')
+plt.ylabel('Price')
+plt.savefig("results/" + STOCK + ".png")
 plt.show()
