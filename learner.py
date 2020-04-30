@@ -16,7 +16,7 @@ from tf_agents.metrics import tf_metrics
 from tf_agents.drivers import py_driver
 from tf_agents.drivers import dynamic_episode_driver
 
-from environment import BitcoinEnvironment
+from environment import TradingEnvironment
 import datetime as dt
 import numpy as np
 import pandas as pd
@@ -24,8 +24,8 @@ import matplotlib.pyplot as plt
 
 AGENT_MODEL_PATH = "policy_10000" # @param
 SAVE_MODEL, LOAD_MODEL = True, False # @param
-STOCK = 'BTC'
-CSV_PATH = 'btcusd.csv' # @param
+STOCK = 'BTC' # @param
+CSV_PATH = 'btcusd-min.csv' # @param
 
 # Check for GPU
 physical_devices = tf.config.experimental.list_physical_devices('GPU')
@@ -37,17 +37,19 @@ def compute_performance(environment, policy):
   time_step = environment.reset()
   total_return = 0.0
   balance = [time_step.observation[0][0]]
+  actions = []
 
   while not time_step.is_last():
     action_step = policy.action(time_step, policy_state)
     time_step = environment.step(action_step.action)
     total_return += time_step.reward
     balance.append(time_step.observation[0][0])
+    actions.append(action_step.action)
     # print(time_step.observation)
 
-  return total_return[0], balance
+  return total_return[0], balance, actions
   
-num_iterations = 10000  # @param
+num_iterations = 40000  # @param
 
 replay_buffer_capacity = 100000  # @param
 
@@ -59,29 +61,28 @@ log_interval = 200  # @param
 
 eval_interval = 1000  # @param
 
-date_split = dt.datetime(2018, 3, 16, 1, 0)  # @param
+date_split = dt.datetime(2020, 4, 1, 1, 0)  # @param
 
 # Split data into training and test set
 prices = pd.read_csv(CSV_PATH, parse_dates=True, index_col=0)
 train = prices[:date_split]
 test = prices[date_split:]
 
-initial_balance = 10000  # @param
-training_duration = 200  # @param
-eval_duration = 200 # @param
+initial_balance = 100  # @param
+training_duration = 10000  # @param
+eval_duration = 1000 # @param
 
 # Strategy 
 slow_ma_t = 26
 fast_ma_t = 12
-return_history_t = 15
+return_history_t = 100
 mean_history_t = 15
 macd_t = 10
 
-
 # Create Environments
-train_py_env = wrappers.TimeLimit(BitcoinEnvironment(initial_balance, train, 15, 15, 10, fast_ma_t, slow_ma_t), duration=training_duration)
-eval_py_env = wrappers.TimeLimit(BitcoinEnvironment(initial_balance, test, 15, 15, 10, fast_ma_t, slow_ma_t ), duration=eval_duration)
-test_py_env = wrappers.TimeLimit(BitcoinEnvironment(initial_balance, test, 15, 15, 10, fast_ma_t, slow_ma_t ), duration=len(test)-1)
+train_py_env = wrappers.TimeLimit(TradingEnvironment(initial_balance, train, return_history_t, mean_history_t, macd_t, fast_ma_t, slow_ma_t), duration=training_duration)
+eval_py_env = wrappers.TimeLimit(TradingEnvironment(initial_balance, test, return_history_t, mean_history_t, macd_t, fast_ma_t, slow_ma_t ), duration=eval_duration)
+test_py_env = wrappers.TimeLimit(TradingEnvironment(initial_balance, test, return_history_t, mean_history_t, macd_t, fast_ma_t, slow_ma_t ), duration=len(test)-1)
 
 train_env = tf_py_environment.TFPyEnvironment(train_py_env)
 eval_env = tf_py_environment.TFPyEnvironment(eval_py_env)
@@ -184,22 +185,23 @@ for i in range(num_iterations):
     print('Average episode length: {}'.format(train_metrics[3].result().numpy()))
 
   if step % eval_interval == 0:
-    reward, portfolio_balance = compute_performance(eval_env, tf_agent.policy)
+    reward, portfolio_balance, actions = compute_performance(eval_env, tf_agent.policy)
     print('step = {0}: Average Reward = {1}: Ending Portfolio Balance = {2}'.format(step, reward, portfolio_balance[-1]))
 
 
 if SAVE_MODEL:
+  print("Saving Model...")
   my_policy = tf_agent.collect_policy
   saver = policy_saver.PolicySaver(my_policy, batch_size=None)
-  saver.save('policy_%d' % num_iterations)
+  saver.save('policy_1min_%d' % num_iterations)
 
 # Compare against Buy and hold
-reward, portfolio_balance = compute_performance(test_env, tf_agent.policy)
+reward, portfolio_balance, actions = compute_performance(test_env, tf_agent.policy)
 bnh = eval_py_env.buy_and_hold().head(len(test))
 portfolio_balance = pd.DataFrame(data={'Close': np.array(portfolio_balance)}, index=bnh.index)
 print("RL GAIN = {}: BUY/HOLD = {}".format(portfolio_balance.iloc[-1,:]['Close']-portfolio_balance.iloc[0,:]['Close'], bnh.iloc[-1]['Close']-bnh.iloc[0]['Close']))
 print("% RL GAIN = {}: % BUY/HOLD = {}".format((portfolio_balance.iloc[-1,:]['Close']-portfolio_balance.iloc[0,:]['Close'])/portfolio_balance.iloc[0,:]['Close'], (bnh.iloc[-1]['Close']-bnh.iloc[0]['Close'])/bnh.iloc[0]['Close']))
-
+print(actions)
 bnh['Close'].plot()
 portfolio_balance['Close'].plot()
 
