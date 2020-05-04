@@ -17,15 +17,16 @@ from tf_agents.drivers import py_driver
 from tf_agents.drivers import dynamic_episode_driver
 
 from environment import TradingEnvironment
+from features import Features
 import datetime as dt
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-AGENT_MODEL_PATH = "policy_10000" # @param
-SAVE_MODEL, LOAD_MODEL = True, False # @param
+AGENT_MODEL_PATH = "policy_1min_1000" # @param
+SAVE_MODEL, LOAD_MODEL = False, True # @param
 STOCK = 'BTC' # @param
-CSV_PATH = 'btcusd-min.csv' # @param
+CSV_PATH = 'btcusd.csv' # @param
 
 # Check for GPU
 physical_devices = tf.config.experimental.list_physical_devices('GPU')
@@ -46,10 +47,9 @@ def compute_performance(environment, policy):
     balance.append(time_step.observation[0][0])
     actions.append(action_step.action)
     # print(time_step.observation)
-
   return total_return[0], balance, actions
   
-num_iterations = 40000  # @param
+num_iterations = 10000  # @param
 
 replay_buffer_capacity = 100000  # @param
 
@@ -59,9 +59,9 @@ batch_size = 100  # @param
 learning_rate = 1e-4  # @param
 log_interval = 200  # @param
 
-eval_interval = 1000  # @param
+eval_interval = 200  # @param
 
-date_split = dt.datetime(2020, 4, 1, 1, 0)  # @param
+date_split = dt.datetime(2020, 1, 1, 1, 0)  # @param
 
 # Split data into training and test set
 prices = pd.read_csv(CSV_PATH, parse_dates=True, index_col=0)
@@ -70,19 +70,19 @@ test = prices[date_split:]
 
 initial_balance = 100  # @param
 training_duration = 10000  # @param
-eval_duration = 1000 # @param
+eval_duration = 200 # @param
 
-# Strategy 
-slow_ma_t = 26
-fast_ma_t = 12
-return_history_t = 100
-mean_history_t = 15
-macd_t = 10
+
+# Create a feature list:
+# Push start date forward by features_length to have non-zero initial features
+features_length = 20
+train_strategy = Features(train, features_length)
+test_strategy = Features(test, features_length)
 
 # Create Environments
-train_py_env = wrappers.TimeLimit(TradingEnvironment(initial_balance, train, return_history_t, mean_history_t, macd_t, fast_ma_t, slow_ma_t), duration=training_duration)
-eval_py_env = wrappers.TimeLimit(TradingEnvironment(initial_balance, test, return_history_t, mean_history_t, macd_t, fast_ma_t, slow_ma_t ), duration=eval_duration)
-test_py_env = wrappers.TimeLimit(TradingEnvironment(initial_balance, test, return_history_t, mean_history_t, macd_t, fast_ma_t, slow_ma_t ), duration=len(test)-1)
+train_py_env = wrappers.TimeLimit(TradingEnvironment(initial_balance, train_strategy), duration=training_duration)
+eval_py_env = wrappers.TimeLimit(TradingEnvironment(initial_balance, test_strategy), duration=eval_duration)
+test_py_env = wrappers.TimeLimit(TradingEnvironment(initial_balance, test_strategy), duration=len(test)-features_length-1)
 
 train_env = tf_py_environment.TFPyEnvironment(train_py_env)
 eval_env = tf_py_environment.TFPyEnvironment(eval_py_env)
@@ -197,11 +197,11 @@ if SAVE_MODEL:
 
 # Compare against Buy and hold
 reward, portfolio_balance, actions = compute_performance(test_env, tf_agent.policy)
-bnh = eval_py_env.buy_and_hold().head(len(test))
+bnh = eval_py_env.buy_and_hold()
+
 portfolio_balance = pd.DataFrame(data={'Close': np.array(portfolio_balance)}, index=bnh.index)
 print("RL GAIN = {}: BUY/HOLD = {}".format(portfolio_balance.iloc[-1,:]['Close']-portfolio_balance.iloc[0,:]['Close'], bnh.iloc[-1]['Close']-bnh.iloc[0]['Close']))
 print("% RL GAIN = {}: % BUY/HOLD = {}".format((portfolio_balance.iloc[-1,:]['Close']-portfolio_balance.iloc[0,:]['Close'])/portfolio_balance.iloc[0,:]['Close'], (bnh.iloc[-1]['Close']-bnh.iloc[0]['Close'])/bnh.iloc[0]['Close']))
-print(actions)
 bnh['Close'].plot()
 portfolio_balance['Close'].plot()
 
