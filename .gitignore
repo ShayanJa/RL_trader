@@ -1,4 +1,6 @@
 .env
+.vscode
+__pychache__
 b-test.py
 results
 asset_prices
