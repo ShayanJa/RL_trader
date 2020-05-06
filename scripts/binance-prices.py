@@ -34,6 +34,7 @@ _columns=[
 def main():
   pass
 
+# python scripts/binance-prices.py price BTCUSDT
 @main.command()
 @click.argument('crypto')
 def price(crypto):
@@ -44,7 +45,7 @@ def price(crypto):
   prices['Open time'] = prices['Open time'].apply(lambda x: dt.datetime.fromtimestamp(int(x)/1000))
   prices = prices.set_index('Open time')
   # Save data
-  prices.to_csv('btcusd-min.csv')
+  prices.to_csv(PRICE_PATH + crypto + '.csv')
 
   # Display data
   plt.plot(prices['Close'])

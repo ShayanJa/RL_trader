@@ -23,32 +23,18 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-AGENT_MODEL_PATH = "policy_1min_1000" # @param
-SAVE_MODEL, LOAD_MODEL = False, True # @param
-STOCK = 'BTC' # @param
-CSV_PATH = 'btcusd.csv' # @param
-
 # Check for GPU
 physical_devices = tf.config.experimental.list_physical_devices('GPU')
 if physical_devices:
   tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
-def compute_performance(environment, policy):
+# Declare env parameters
+AGENT_MODEL_PATH = "policy_1min_1000" # @param
+SAVE_MODEL, LOAD_MODEL = False, True # @param
+STOCK = 'BTC' # @param
+CSV_PATH = 'asset_prices/btcusd.csv' # @param
 
-  time_step = environment.reset()
-  total_return = 0.0
-  balance = [time_step.observation[0][0]]
-  actions = []
-
-  while not time_step.is_last():
-    action_step = policy.action(time_step, policy_state)
-    time_step = environment.step(action_step.action)
-    total_return += time_step.reward
-    balance.append(time_step.observation[0][0])
-    actions.append(action_step.action)
-    # print(time_step.observation)
-  return total_return[0], balance, actions
-  
+# Declare model Hyper parameters
 num_iterations = 10000  # @param
 
 replay_buffer_capacity = 100000  # @param
@@ -63,26 +49,26 @@ eval_interval = 200  # @param
 
 date_split = dt.datetime(2020, 1, 1, 1, 0)  # @param
 
+initial_balance = 100  # @param
+training_duration = 1000  # @param
+eval_duration = 200 # @param
+
 # Split data into training and test set
 prices = pd.read_csv(CSV_PATH, parse_dates=True, index_col=0)
 train = prices[:date_split]
 test = prices[date_split:]
 
-initial_balance = 100  # @param
-training_duration = 10000  # @param
-eval_duration = 200 # @param
-
-
 # Create a feature list:
 # Push start date forward by features_length to have non-zero initial features
+# Cleanup logic here
 features_length = 20
-train_strategy = Features(train, features_length)
-test_strategy = Features(test, features_length)
+train_features = Features(train, features_length)
+test_features = Features(test, features_length)
 
 # Create Environments
-train_py_env = wrappers.TimeLimit(TradingEnvironment(initial_balance, train_strategy), duration=training_duration)
-eval_py_env = wrappers.TimeLimit(TradingEnvironment(initial_balance, test_strategy), duration=eval_duration)
-test_py_env = wrappers.TimeLimit(TradingEnvironment(initial_balance, test_strategy), duration=len(test)-features_length-1)
+train_py_env = wrappers.TimeLimit(TradingEnvironment(initial_balance, train_features), duration=training_duration)
+eval_py_env = wrappers.TimeLimit(TradingEnvironment(initial_balance, test_features), duration=eval_duration)
+test_py_env = wrappers.TimeLimit(TradingEnvironment(initial_balance, test_features), duration=len(test)-features_length-1)
 
 train_env = tf_py_environment.TFPyEnvironment(train_py_env)
 eval_env = tf_py_environment.TFPyEnvironment(eval_py_env)
@@ -110,7 +96,7 @@ if LOAD_MODEL:
   try:
     collect_policy = tf.compat.v2.saved_model.load(AGENT_MODEL_PATH)
     policy_state = collect_policy.get_initial_state(batch_size=3)
-    print("Policy loaded from: {}".format(AGENT_MODEL_PATH))
+    print("Loading policy from: {}".format(AGENT_MODEL_PATH))
   except:
     print("Initiating new policy...")
     collect_policy = tf_agent.collect_policy
@@ -133,6 +119,22 @@ train_metrics = [
   tf_metrics.AverageEpisodeLengthMetric(),
 ]
 
+def compute_performance(environment, policy):
+
+  time_step = environment.reset()
+  total_return = 0.0
+  balance = [time_step.observation[0][0]]
+  actions = []
+
+  while not time_step.is_last():
+    action_step = policy.action(time_step)
+    time_step = environment.step(action_step.action)
+    total_return += time_step.reward
+    balance.append(time_step.observation[0][0])
+    actions.append(action_step.action)
+    # print(time_step.observation)
+  return total_return[0], balance, actions
+  
 def collect_step(environment, policy):
   time_step = environment.current_time_step()
   action_step = policy.action(time_step)
@@ -198,10 +200,13 @@ if SAVE_MODEL:
 # Compare against Buy and hold
 reward, portfolio_balance, actions = compute_performance(test_env, tf_agent.policy)
 bnh = eval_py_env.buy_and_hold()
-
 portfolio_balance = pd.DataFrame(data={'Close': np.array(portfolio_balance)}, index=bnh.index)
-print("RL GAIN = {}: BUY/HOLD = {}".format(portfolio_balance.iloc[-1,:]['Close']-portfolio_balance.iloc[0,:]['Close'], bnh.iloc[-1]['Close']-bnh.iloc[0]['Close']))
-print("% RL GAIN = {}: % BUY/HOLD = {}".format((portfolio_balance.iloc[-1,:]['Close']-portfolio_balance.iloc[0,:]['Close'])/portfolio_balance.iloc[0,:]['Close'], (bnh.iloc[-1]['Close']-bnh.iloc[0]['Close'])/bnh.iloc[0]['Close']))
+
+rl_gain = portfolio_balance.iloc[[0,-1]]['Close'].diff().values[-1]
+bnh_gain = bnh.iloc[[0,-1]]['Close'].diff().values[-1]
+
+print("RL GAIN = {}: BUY/HOLD = {}".format(rl_gain, bnh_gain))
+print("% RL GAIN = {}: % BUY/HOLD = {}".format( rl_gain / portfolio_balance.iloc[0]['Close'], bnh_gain / bnh.iloc[0]['Close']))
 bnh['Close'].plot()
 portfolio_balance['Close'].plot()
 

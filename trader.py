@@ -16,32 +16,30 @@ load_dotenv()
 
 AGENT_MODEL_PATH = "policy_10000"
 
+# Check for GPU
 physical_devices = tf.config.experimental.list_physical_devices('GPU')
 if physical_devices:
   tf.config.experimental.set_memory_growth(physical_devices[0], True)
-
 
 # Initialize Binance client
 api_key = os.getenv("CLIENT_KEY")
 api_secret = os.getenv("SECRET_KEY")
 client = Client(api_key, api_secret)
 
+# Initialize Live Environment
 live_env = LiveBinanceEnvironment("BTC", "USDT", .002, 15, 15, 10, 12, 26)
 live_env = tf_py_environment.TFPyEnvironment(live_env )
 fc_layer_params = (100,23,33)
 
-try:
-  collect_policy = tf.compat.v2.saved_model.load(AGENT_MODEL_PATH)
-  policy_state = collect_policy.get_initial_state(batch_size=3)
+try: #Loading up an agent policy
+  policy = tf.compat.v2.saved_model.load(AGENT_MODEL_PATH)
+  policy_state = policy.get_initial_state(batch_size=3)
   print("Policy loaded from: {}".format(AGENT_MODEL_PATH))
 except:
   raise Exception("Model needed")
 
-
-policy = tf.compat.v2.saved_model.load(AGENT_MODEL_PATH)
-policy_state = collect_policy.get_initial_state(batch_size=3)
-
-# Run a step every x period
+# Schedule the agent to run at every T time interval
+# The agent will make a step depending on the current state
 s = sched.scheduler(time.time, time.sleep)
 
 time_step = live_env.current_time_step()
