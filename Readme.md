@@ -1,6 +1,6 @@
 # Q Network RL Trading bot
 
-This bot uses the DQN algorithm to learn a trading strategy based on relevant market data such as price, price history, technicals, fundamentals or sentiment. The trading strategy tries to optimize a policy π which maps current knowledge (or s) to the best action a = π(s). This is determined by the reward that is received by this assignment Q(s,a). The bot will try to maximize the reward as much as possible by modifying the policy.
+This bot uses the DQN algorithm to learn a trading strategy based on relevant market data such as price, price history, and technicals. The trading strategy tries to optimize a policy π which maps current knowledge (or s) to the best action a = π(s). This is determined by the reward that is received by this assignment Q(s,a). The bot will try to maximize the reward as much as possible by modifying the policy.
  
 The challenge to making a successful RL trading bot is to construct an appropriate reward function and an appropriate state to learn from. 
 What factors are more important and what factors matter less?
