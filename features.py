@@ -31,9 +31,9 @@ class Features():
 
 
 
-if __name__=="main":
+if __name__ == "__main__":
   
-  CSV_PATH = 'btcusd-min.csv'
+  CSV_PATH = 'asset_prices/btcusd.csv'
 
   # Split data into training and test set
   date_split = dt.datetime(2020, 3, 14, 1, 0)  # @param

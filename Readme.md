@@ -37,7 +37,7 @@ python scripts/stock-prices.py price
 ```
 
 ### Improvements
-Fine tuning hyper parameters
-Improve reward function
-Adding sentiment analysis to the state
-Risk Management
+- Fine tuning hyper parameters
+- Improve reward function
+- Adding sentiment analysis to the state
+- Risk Management

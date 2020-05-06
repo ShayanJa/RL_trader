@@ -1,6 +1,6 @@
 .env
 .vscode
-__pychache__
+__pycache__
 b-test.py
-results
-asset_prices
+asset_prices/*
+results/*
