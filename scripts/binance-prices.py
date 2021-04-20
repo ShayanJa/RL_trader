@@ -38,7 +38,7 @@ def main():
 @main.command()
 @click.argument('crypto')
 def price(crypto):
-  klines = client.get_historical_klines(crypto, Client.KLINE_INTERVAL_1MINUTE, "100 day ago UTC")
+  klines = client.get_historical_klines(crypto, Client.KLINE_INTERVAL_1DAY, "100 day ago UTC")
   prices = pd.DataFrame(klines, columns=_columns).astype(float)
 
   # Change timestamp to datetime
