@@ -10,6 +10,10 @@ This project is based off of the tf_agents library, adhering to py_environment.P
 For more info on Q-Learning
 https://en.wikipedia.org/wiki/Q-learning
 
+## Install
+```
+pip install -r requirements.txt
+```
 
 ## Learn 
 modify hyper parameters in learner.py

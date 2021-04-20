@@ -29,8 +29,8 @@ if physical_devices:
   tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 # Declare env parameters
-AGENT_MODEL_PATH = "policy_1min_1000" # @param
-SAVE_MODEL, LOAD_MODEL = False, True # @param
+AGENT_MODEL_PATH = "policy_1day_1000" # @param
+SAVE_MODEL, LOAD_MODEL = False, False # @param
 STOCK = 'BTC' # @param
 CSV_PATH = 'asset_prices/btcusd.csv' # @param
 
