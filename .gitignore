@@ -3,4 +3,5 @@
 __pycache__
 b-test.py
 asset_prices/*
+plots/*
 results/*

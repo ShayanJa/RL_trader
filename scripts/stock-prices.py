@@ -9,7 +9,7 @@ START = dt.datetime(2015, 1, 1)
 END = dt.datetime(2020, 4, 27)
 
 PRICE_PATH = "asset_prices/"
-PLOT_PATH = "asset_prices/plots/"
+PLOT_PATH = "plots/"
 
 @click.group()
 def main():

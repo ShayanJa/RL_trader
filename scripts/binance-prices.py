@@ -8,7 +8,7 @@ from plotly import tools
 import click
 
 PRICE_PATH = "asset_prices/"
-PLOT_PATH = "asset_prices/plots/"
+PLOT_PATH = "plots/"
 
 # Initialize Binance client
 api_key = os.getenv("CLIENT_KEY")
