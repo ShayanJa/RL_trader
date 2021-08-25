@@ -7,5 +7,5 @@ numpy==1.19.2
 plotly==4.14.3
 python-binance==0.7.10
 python-dotenv==0.17.0
-tensorflow==2.4.1
+tensorflow==2.5.1
 tf_agents==0.7.1
